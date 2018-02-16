@@ -17,7 +17,7 @@ CLI tool for easily deploying app bundles to the STRATO blockchain
 Open your terminal and install the STRATO CLI Tool from the NPM repository, run:
 
 ```
-install -g strato-cli
+npm install -g strato-cli
 ```
 
 Test your installation by running the command 
@@ -77,9 +77,9 @@ You will be prompted for a `password` for the STRATO User you created at the sta
 
 Upon successful upload of the application, you will receive the following response including the URL of the deployed app:
 
-```
+`
 application successfully deployed with url http://stratodev.blockapps.net/apps/<unique url>
-```
+`
 
 The app will be visible in the App Launchpad, you can view it and use it by navigating to:
 
