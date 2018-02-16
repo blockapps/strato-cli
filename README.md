@@ -49,7 +49,7 @@ You will be prompted for bundle information, complete as follows:
 ```
 app title: <any title>
 app description: <any description>
-Version: <any version number>   
+version: <any version number>   
 email: <your email address>
 ```
 
@@ -76,7 +76,6 @@ strato upload /path/to/<app name>
 You will be prompted for a `password` for the STRATO User you created at the start of this guide.
 
 Upon successful upload of the application, you will receive the following response including the URL of the deployed app:
-
 `
 application successfully deployed with url http://stratodev.blockapps.net/apps/<unique url>
 `
