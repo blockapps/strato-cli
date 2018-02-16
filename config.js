@@ -4,7 +4,7 @@ const yaml = require("write-yaml");
 const path = require("path");
 const { APPLICATION } = require("./properties");
 
-// prompt questions for bloc config command
+// prompt questions for strato config command
 var username = [
   {
     type: "input",
@@ -44,7 +44,7 @@ var config = {
 };
 
 /**
- * Entry point for the bloc config command
+ * Entry point for the strato config command
  * @returns {Promise}
  */
 function main() {
@@ -143,7 +143,7 @@ function captureKeys() {
 }
 
 /**
- * Generate 'bloc' folder in User's home directory and generate config.yaml file
+ * Generate 'strato' folder in User's home directory and generate config.yaml file
  * @returns {Promise}
  */
 function generateFile() {

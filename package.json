@@ -1,7 +1,8 @@
 {
   "name": "strato-cli",
-  "version": "0.9.0",
-  "description": "CLI tool for easily deploying app bundles to the STRATO blockchain",
+  "version": "0.0.1",
+  "description":
+    "CLI tool for easily deploying app bundles to the STRATO blockchain",
   "author": "BlockApps",
   "license": "Apache-2.0",
   "repository": {
@@ -37,5 +38,8 @@
     "request": "^2.83.0",
     "request-promise": "^4.2.2",
     "write-yaml": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=6.13.0"
   }
 }

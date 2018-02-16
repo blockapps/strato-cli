@@ -1,6 +1,5 @@
 module.exports = {
   APPLICATION: {
-    APPLICATION_VERSION: "0.9.0",
     HOME_PATH:
       process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE,
     CONFIG_FOLDER: "strato",

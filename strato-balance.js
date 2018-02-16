@@ -19,10 +19,10 @@ function main() {
     .then(result => {
       if (!result) {
         console.log(
-          "In order to configure your bloc environment, you must enter your information below."
+          "In order to configure your strato environment, you must enter your information below."
         );
         console.log(
-          "Note: if you have already completed this step, make sure that your ./bloc directory contains a config.yaml file."
+          "Note: if you have already completed this step, make sure that your ./strato directory contains a config.yaml file."
         );
         config_command
           .main()
@@ -39,7 +39,7 @@ function main() {
 }
 
 /**
- * Entry point for the bloc balance command
+ * Entry point for the strato balance command
  */
 function getBalance() {
   try {
@@ -92,15 +92,21 @@ function getBalance() {
           });
         } else {
           console.log(
-            "username not found. try running bloc config to modify username"
+            "username not found. try running strato config to modify username"
           );
         }
       })
       .catch(err => {
         if (err.error.code === "ECONNREFUSED") {
-          console.error('host unreachable or connection refused. try running bloc config to modify host address');
+          console.error(
+            "Error: could not connect to the host. try running strato config to modify host address"
+          );
+        } else if (err.error.code === "ENOTFOUND") {
+          console.error(
+            "Error: could not connect to STRATO. try running strato config to modify host address"
+          );
         } else {
-          console.error("error occured with code " + err.error.code);
+          console.error("Error: code " + err.error.code);
         }
       });
   } catch (err) {

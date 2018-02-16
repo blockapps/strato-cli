@@ -2,9 +2,9 @@
 const program = require("commander");
 const pkg = require('./package.json');
 
-// entry point for bloc command
+// entry point for strato command
 program
-  // version number for bloc command
+  // version number for strato command
   .version(pkg.version)
 
   // sub-commands defined here
@@ -20,5 +20,5 @@ program.on("--help", () => {
 
 program.parse(process.argv);
 
-// calling bloc --help when no sub-command provided
+// calling strato --help when no sub-command provided
 if (!program.args.length) program.help();

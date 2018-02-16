@@ -9,7 +9,7 @@ const utils = require("./utils");
 const config_command = require("./config");
 const { APPLICATION } = require("./properties");
 
-// prompt questions for bloc init with validation are declared here
+// prompt questions for strato init with validation are declared here
 var questions = [
   {
     type: "input",
@@ -75,7 +75,7 @@ var metadata = {
 };
 
 /**
- * Entry point for the bloc init command
+ * Entry point for the strato init command
  */
 function main() {
   // check if config.yaml exists
@@ -90,10 +90,10 @@ function main() {
     .then(result => {
       if (!result) {
         console.log(
-          "In order to configure your bloc environment, you must enter your information below."
+          "In order to configure your strato environment, you must enter your information below."
         );
         console.log(
-          "Note: if you have already completed this step, make sure that your ./bloc directory contains a config.yaml file."
+          "Note: if you have already completed this step, make sure that your ./strato directory contains a config.yaml file."
         );
         config_command
           .main()
@@ -126,13 +126,15 @@ function getDetails() {
 
       response_stream.on("error", err => {
         if (err.code === "ENOTFOUND") {
-          console.error("try running bloc config to modify host address");
+          console.error(
+            "Error: could not connect to STRATO. try running strato config to modify host address"
+          );
         } else if (err.code === "ECONNREFUSED") {
           console.error(
-            "host unreachable or connection refused. try running bloc config to modify host address"
+            "Error: could not connect to the host. try running strato config to modify host address"
           );
         } else {
-          console.error("error occured with code " + err.code);
+          console.error("Error: code " + err.code);
         }
       });
 
@@ -153,13 +155,14 @@ function getDetails() {
                   APPLICATION.REPO_NAME + "-master",
                   metadata.name,
                   () => {
-
                     // create metadata.json file
                     fs.writeFile(
                       path.join(metadata.name, APPLICATION.METADATA_FILE),
                       JSON.stringify(metadata),
                       err => {
-                        if (err) console.error(err);
+                        if (err) {
+                          console.error(err);
+                        }
                         console.log(
                           "cd " +
                             metadata.name +
@@ -177,16 +180,11 @@ function getDetails() {
                 });
               } catch (err) {
                 if (err) console.error(err);
-                console.log(
-                  "cd " +
-                    metadata.name +
-                    "\nLearn STRATO and Solidity development at https://blockapps.net/training"
-                );
               }
             });
         } else {
           console.error(
-            "error downloading sample proejct. returned error code " +
+            "error downloading sample project. returned error code " +
               body.statusCode
           );
         }

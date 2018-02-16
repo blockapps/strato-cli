@@ -25,10 +25,10 @@ program.arguments("<dir>").action(dir => {
     .then(result => {
       if (!result) {
         console.log(
-          "In order to configure your bloc environment, you must enter your information below."
+          "In order to configure your strato environment, you must enter your information below."
         );
         console.log(
-          "Note: if you have already completed this step, make sure that your ./bloc directory contains a config.yaml file."
+          "Note: if you have already completed this step, make sure that your ./strato directory contains a config.yaml file."
         );
 
         // create configuration file
@@ -47,12 +47,12 @@ program.parse(process.argv);
 // check if <dir> attribute is passed or not
 if (typeof dirValue === "undefined") {
   console.error(
-    "directory path required with respect to home folder! Please refer to bloc --help"
+    "directory path required with respect to home folder! Please refer to strato --help"
   );
 }
 
 /**
- * Entry point for the bloc upload command
+ * Entry point for the strato upload command
  */
 function main() {
   // check if app with title exists or not
@@ -86,9 +86,9 @@ function main() {
           // -> index.html
           // -> metadata.json
           if (!items.includes("metadata.json")) {
-            console.error("missing metadata.json file");
+            console.error("Error: missing metadata.json file");
           } else if (!items.includes("index.html")) {
-            console.error("missing index.html file");
+            console.error("Error: missing index.html file");
           } else if (items.includes("contracts")) {
             // check for the content of contracts folder if exists
             fs.readdir(
@@ -103,7 +103,7 @@ function main() {
                   // extension checking can be improved in future
                   if (/^\..*/.test(file)) {
                     console.error(
-                      "there are some hidden files in the contracts folder"
+                      "Error: here are some hidden files in the contracts folder"
                     );
                     nonSolFileExists = true;
 
@@ -149,25 +149,27 @@ function main() {
                     });
                 } else {
                   console.error(
-                    "contracts folder should only contain .sol file(s)"
+                    "Error: contracts folder should only contain .sol file(s)"
                   );
                 }
               }
             );
           } else {
-            console.error("missing contracts folder");
+            console.error("Error: missing contracts folder");
           }
         });
       } else {
         console.error(
-          "no dApp found with name " + dirValue + "in respect to home folder"
+          "Error: no dApp found with name " +
+            dirValue +
+            "with respect to home folder"
         );
       }
     });
 }
 
 /**
- * Create .zip file inside User's home directory /bloc
+ * Create .zip file inside User's home directory /strato
  * @returns {Promise}
  */
 
@@ -253,7 +255,7 @@ function uploadZip() {
               }
             };
 
-            console.log('uploading...');
+            console.log("uploading...");
             // call apex api to upload zip file and delete file after that
             rp(options)
               .then(body => {
@@ -282,17 +284,21 @@ function uploadZip() {
           });
         } else {
           console.log(
-            "username not found. try running bloc config to modify username or host address"
+            "username not found. try running strato config to modify username"
           );
         }
       })
       .catch(err => {
         if (err.error.code === "ECONNREFUSED") {
           console.error(
-            "host unreachable or connection refused. try running bloc config to modify host address"
+            "Error: could not connect to the host. try running strato config to modify host address"
+          );
+        } else if (err.error.code === "ENOTFOUND") {
+          console.error(
+            "Error: could not connect to STRATO. try running strato config to modify host address"
           );
         } else {
-          console.error("error occured with code " + err.error.code);
+          console.error("Error: code " + err.error.code);
         }
       });
   } catch (err) {
