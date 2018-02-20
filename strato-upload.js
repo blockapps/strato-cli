@@ -1,4 +1,3 @@
-#!/usr/bin/env node --harmony
 const { prompt } = require("inquirer");
 const program = require("commander");
 const rp = require("request-promise");

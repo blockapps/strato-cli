@@ -1,4 +1,3 @@
-#!/usr/bin/env node --harmony
 const { prompt } = require("inquirer");
 const yaml = require("write-yaml");
 const path = require("path");
