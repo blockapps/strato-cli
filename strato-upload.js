@@ -56,116 +56,114 @@ if (typeof dirValue === "undefined") {
  */
 function main() {
   // check if app with title exists or not
-  utils
-    .fsDirExistsSync(path.join(APPLICATION.HOME_PATH, dirValue))
-    .then(result => {
-      if (result) {
-        // logic to validate content of provided folder
-        fs.readdir(path.join(APPLICATION.HOME_PATH, dirValue), (err, items) => {
-          if (err) {
-            console.error(err);
-          }
+  utils.fsDirExistsSync(path.resolve(dirValue)).then(result => {
+    if (result) {
+      // logic to validate content of provided folder
+      fs.readdir(path.resolve(dirValue), (err, items) => {
+        if (err) {
+          console.error(err);
+        }
 
-          // <---------------- START logic for deleting hidden files in application folder ---------------->
+        // <---------------- START logic for deleting hidden files in application folder ---------------->
 
-          // delete hidden system files like .DS_Store on mac
-          // this is a performance bottleneck. Can be optimized in future.
+        // delete hidden system files like .DS_Store on mac
+        // this is a performance bottleneck. Can be optimized in future.
 
-          // if (/^\..*/.test(items)) {
-          //   items.forEach(item => {
-          //     if (/^\..*/.test(item)) {
-          //       fs.unlinkSync(path.join(APPLICATION.HOME_PATH, dirValue, item));
-          //     }
-          //   });
-          // }
+        // if (/^\..*/.test(items)) {
+        //   items.forEach(item => {
+        //     if (/^\..*/.test(item)) {
+        //       fs.unlinkSync(path.join(APPLICATION.HOME_PATH, dirValue, item));
+        //     }
+        //   });
+        // }
 
-          // <---------------- END logic for deleting hidden files in application folder ------------------>
+        // <---------------- END logic for deleting hidden files in application folder ------------------>
 
-          // check folder structure
-          // -> contracts -> .sol file(s)
-          // -> index.html
-          // -> metadata.json
-          if (!items.includes("metadata.json")) {
-            console.error("Error: missing metadata.json file");
-          } else if (!items.includes("index.html")) {
-            console.error("Error: missing index.html file");
-          } else if (items.includes("contracts")) {
-            // check for the content of contracts folder if exists
-            fs.readdir(
-              path.join(APPLICATION.HOME_PATH, dirValue, "contracts"),
-              (err, list) => {
-                if (err) {
-                  console.error(err);
-                }
-                let nonSolFileExists = false;
-                list.forEach(file => {
-                  // test cases to delete hidden files and check only for .sol extension files
-                  // extension checking can be improved in future
-                  if (/^\..*/.test(file)) {
-                    console.error(
-                      "Error: here are some hidden files in the contracts folder"
-                    );
-                    nonSolFileExists = true;
-
-                    // <---------------- START logic for deleting hidden files in contracts folder ---------------->
-
-                    // delete hidden file(s)
-                    // fs.unlinkSync(
-                    //   path.join(APPLICATION.HOME_PATH, dirValue, file)
-                    // );
-
-                    // <---------------- END logic for deleting hidden files in contracts folder ------------------>
-                  }
-                  if (path.extname(file) !== ".sol") {
-                    nonSolFileExists = true;
-                  }
-                });
-
-                // throw error if there are some other files in contracts folder including hidden files
-                if (!nonSolFileExists) {
-                  zipFolder(dirValue)
-                    .then(() => {
-                      uploadZip();
-                    })
-                    .catch(err => {
-                      if (
-                        fs.existsSync(
-                          path.join(
-                            APPLICATION.HOME_PATH,
-                            APPLICATION.CONFIG_FOLDER,
-                            APPLICATION.ZIP_FILE
-                          )
-                        )
-                      ) {
-                        fs.unlinkSync(
-                          path.join(
-                            APPLICATION.HOME_PATH,
-                            APPLICATION.CONFIG_FOLDER,
-                            APPLICATION.ZIP_FILE
-                          )
-                        );
-                      }
-                      console.error(err);
-                    });
-                } else {
-                  console.error(
-                    "Error: contracts folder should only contain .sol file(s)"
-                  );
-                }
+        // check folder structure
+        // -> contracts -> .sol file(s)
+        // -> index.html
+        // -> metadata.json
+        if (!items.includes("metadata.json")) {
+          console.error("Error: missing metadata.json file");
+        } else if (!items.includes("index.html")) {
+          console.error("Error: missing index.html file");
+        } else if (items.includes("contracts")) {
+          // check for the content of contracts folder if exists
+          fs.readdir(
+            path.join(path.resolve(dirValue), "contracts"),
+            (err, list) => {
+              if (err) {
+                console.error(err);
               }
-            );
-          } else {
-            console.error("Error: missing contracts folder");
-          }
-        });
-      } else {
-        console.error(
-          "Error: no dApp found with name " +
-            dirValue +
-            "with respect to home folder"
-        );
-      }
-    });
+              let nonSolFileExists = false;
+              list.forEach(file => {
+                // test cases to delete hidden files and check only for .sol extension files
+                // extension checking can be improved in future
+                if (/^\..*/.test(file)) {
+                  console.error(
+                    "Error: here are some hidden files in the contracts folder"
+                  );
+                  nonSolFileExists = true;
+
+                  // <---------------- START logic for deleting hidden files in contracts folder ---------------->
+
+                  // delete hidden file(s)
+                  // fs.unlinkSync(
+                  //   path.join(APPLICATION.HOME_PATH, dirValue, file)
+                  // );
+
+                  // <---------------- END logic for deleting hidden files in contracts folder ------------------>
+                }
+                if (path.extname(file) !== ".sol") {
+                  nonSolFileExists = true;
+                }
+              });
+
+              // throw error if there are some other files in contracts folder including hidden files
+              if (!nonSolFileExists) {
+                zipFolder(dirValue)
+                  .then(() => {
+                    uploadZip();
+                  })
+                  .catch(err => {
+                    if (
+                      fs.existsSync(
+                        path.join(
+                          APPLICATION.HOME_PATH,
+                          APPLICATION.CONFIG_FOLDER,
+                          APPLICATION.ZIP_FILE
+                        )
+                      )
+                    ) {
+                      fs.unlinkSync(
+                        path.join(
+                          APPLICATION.HOME_PATH,
+                          APPLICATION.CONFIG_FOLDER,
+                          APPLICATION.ZIP_FILE
+                        )
+                      );
+                    }
+                    console.error(err);
+                  });
+              } else {
+                console.error(
+                  "Error: contracts folder should only contain .sol file(s)"
+                );
+              }
+            }
+          );
+        } else {
+          console.error("Error: missing contracts folder");
+        }
+      });
+    } else {
+      console.error(
+        "Error: no dApp found with name " +
+          dirValue +
+          "with respect to home folder"
+      );
+    }
+  });
 }
 
 /**
@@ -177,7 +175,7 @@ function zipFolder(dir) {
   return new Promise((resolve, reject) => {
     try {
       let zip = new AdmZip();
-      zip.addLocalFolder(path.join(APPLICATION.HOME_PATH, dir, path.sep));
+      zip.addLocalFolder(path.join(path.resolve(dir), path.sep));
       zip.writeZip(
         path.join(
           APPLICATION.HOME_PATH,
