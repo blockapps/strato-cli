@@ -8,7 +8,7 @@ CLI tool for easily deploying app bundles to the STRATO blockchain
 - Node JS (Version 6 and up)
 - Your favorite code editor for solidity (our team uses Sublime or Atom)
 - BlockApps User Account
-- Create a user on BlockApps Testnet - follow the instructions here.
+- Create a user on BlockApps Testnet - following the sign-up process in node dashboard.
 ##### Note: Don’t forget to faucet your account.
 
 
