@@ -1,6 +1,6 @@
 {
   "name": "strato-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description":
     "CLI tool for easily deploying app bundles to the STRATO blockchain",
   "author": "BlockApps",
