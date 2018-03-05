@@ -6,7 +6,7 @@ module.exports = {
     CONFIG_FILE: "config.yaml",
     METADATA_FILE: "metadata.json",
     ZIP_FILE: "strato.zip",
-    REPO_NAME: "sample-zip",
+    REPO_NAME: "blockapps-sample-game",
     GITHUB_LINK: "https://github.com/blockapps/blockapps-sample-game/archive/master.zip",
     TESTNET: "http://stratodev.blockapps.net/"
   },
