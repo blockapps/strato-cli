@@ -25,12 +25,12 @@ var hostname = [
   {
     type: "input",
     name: "hostAddr",
-    message: "host IP address (with http:// || https://): ",
+    message: "host IP or DNS address (with http:// || https://): ",
     validate: value => {
       // validation for IP address.
-      let reg = /^(http|https):\/\/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+      // let reg = /^(http|https):\/\/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
       if (!value) return "host IP address required";
-      if (!value.match(reg)) return "please enter a valid IP address";
+      // if (!value.match(reg)) return "please enter a valid IP address";
       return true;
     }
   }
