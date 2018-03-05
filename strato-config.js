@@ -1,8 +1,10 @@
-const { main } = require("./config");
+const { saveConfig } = require('./config');
 
 /**
  * Entry point for the strato config command
  */
-main().catch(err => {
-  console.error(err);
-});
+saveConfig()
+  .catch((err) => {
+    console.error('Error: ' + err);
+    process.exit();
+  });
