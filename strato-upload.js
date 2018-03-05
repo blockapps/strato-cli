@@ -1,13 +1,13 @@
 const { prompt } = require("inquirer");
 const program = require("commander");
 const rp = require("request-promise");
-const AdmZip = require("adm-zip");
 const yaml = require("js-yaml");
 const fs = require("fs");
 const path = require("path");
 const config_command = require("./config");
 const utils = require("./utils");
 const { APPLICATION, API_ENDPOINTS } = require("./properties");
+const zip = require("./strato-ziplib");
 
 program.arguments("<dir>").action(dir => {
   dirValue = dir;
@@ -120,7 +120,10 @@ function main() {
 
               // throw error if there are some other files in contracts folder including hidden files
               if (!nonSolFileExists) {
-                zipFolder(dirValue)
+                const target = path.join(APPLICATION.HOME_PATH,
+                                         APPLICATION.CONFIG_FOLDER,
+                                         APPLICATION.ZIP_FILE);
+                zip.zipFolder(dirValue, target)
                   .then(() => {
                     uploadZip();
                   })
@@ -161,30 +164,6 @@ function main() {
           dirValue +
           "with respect to home folder"
       );
-    }
-  });
-}
-
-/**
- * Create .zip file inside User's home directory /strato
- * @returns {Promise}
- */
-
-function zipFolder(dir) {
-  return new Promise((resolve, reject) => {
-    try {
-      let zip = new AdmZip();
-      zip.addLocalFolder(path.join(path.resolve(dir), path.sep));
-      zip.writeZip(
-        path.join(
-          APPLICATION.HOME_PATH,
-          APPLICATION.CONFIG_FOLDER,
-          APPLICATION.ZIP_FILE
-        )
-      );
-      resolve();
-    } catch (err) {
-      reject(err);
     }
   });
 }
