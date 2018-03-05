@@ -1,285 +1,298 @@
-const { prompt } = require("inquirer");
-const program = require("commander");
-const rp = require("request-promise");
-const yaml = require("js-yaml");
-const fs = require("fs");
-const path = require("path");
-const config_command = require("./config");
-const utils = require("./utils");
-const { APPLICATION, API_ENDPOINTS } = require("./properties");
-const zip = require("./strato-ziplib");
+const program = require('commander');
+const { prompt } = require('inquirer');
+const rp = require('request-promise');
+const yaml = require('js-yaml');
+const co = require('co');
+const fs = require('fs');
+const path = require('path');
+const { validateConfig, dirExists } = require('./utils');
+const { APPLICATION, API_ENDPOINTS } = require('./properties');
+const { zipFolder } = require('./strato-ziplib');
 
-program.arguments("<dir>").action(dir => {
+let data = {
+  username: null,
+  address: null,
+  hostname: null,
+  password: null
+};
+
+program.arguments('<dir>').action((dir) => {
+
   dirValue = dir;
+  const dAppDir = path.join(APPLICATION.HOME_PATH, dirValue);
+  const zipTarget = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
 
-  // check if config.yaml exists
-  utils
-    .fsFileExistsSync(
-      path.join(
-        APPLICATION.HOME_PATH,
-        APPLICATION.CONFIG_FOLDER,
-        APPLICATION.CONFIG_FILE
-      )
-    )
-    .then(result => {
-      if (!result) {
-        console.log(
-          "In order to configure your strato environment, you must enter your information below."
-        );
-        console.log(
-          "Note: if you have already completed this step, make sure that your ./strato directory contains a config.yaml file."
-        );
+  co(function* () {
 
-        // create configuration file
-        config_command.main().then(() => {
-          console.log("Please enter an application information:");
-          main();
-        });
-      } else {
-        main();
-      }
-    });
+    yield validateConfig()
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
+      });
+
+    yield readYAML()
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
+      });
+
+    yield validateDApp(dAppDir)
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
+      });
+
+    yield zipFolder(dAppDir, zipTarget)
+      .catch((err) => {
+        console.error('Error: ' + err);
+        deleteZip()
+          .then(() => {
+            process.exit();
+          })
+          .catch(() => {
+            process.exit();
+          });
+      });
+
+    yield getUserAddress()
+      .catch((err) => {
+        console.error('Error: ', err);
+        process.exit();
+      });
+
+    yield getPassword()
+      .then((password) => {
+        data.password = password.password;
+      })
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
+      });
+
+    yield uploadZip()
+      .then((response) => {
+        deleteZip();
+        console.log(response);
+      })
+      .catch((err) => {
+        console.error('Error: ' + err);
+        deleteZip();
+        process.exit();
+      });
+
+  });
 });
 
 program.parse(process.argv);
 
-// check if <dir> attribute is passed or not
-if (typeof dirValue === "undefined") {
-  console.error(
-    "directory path required with respect to home folder! Please refer to strato --help"
-  );
+if (typeof dirValue === 'undefined') {
+  console.error('project path required with respect to User\'s home directory! Please refer to strato --help');
+  process.exit();
 }
 
 /**
- * Entry point for the strato upload command
+ * Validate dApp folder structure
+ * @returns {Promise}
  */
-function main() {
-  // check if app with title exists or not
-  utils.fsDirExistsSync(path.resolve(dirValue)).then(result => {
-    if (result) {
-      // logic to validate content of provided folder
-      fs.readdir(path.resolve(dirValue), (err, items) => {
-        if (err) {
-          console.error(err);
-        }
+function validateDApp(dAppDir) {
+  return new Promise((resolve, reject) => {
+    dirExists(dAppDir)
+      .then((exists) => {
 
-        // <---------------- START logic for deleting hidden files in application folder ---------------->
+        if (exists) {
 
-        // delete hidden system files like .DS_Store on mac
-        // this is a performance bottleneck. Can be optimized in future.
+          let contents = fs.readdirSync(dAppDir);
 
-        // if (/^\..*/.test(items)) {
-        //   items.forEach(item => {
-        //     if (/^\..*/.test(item)) {
-        //       fs.unlinkSync(path.join(APPLICATION.HOME_PATH, dirValue, item));
-        //     }
-        //   });
-        // }
+          let _tmpPath = path.join(dAppDir, 'index.html');
+          if (!(contents.indexOf('index.html') > -1 && fs.statSync(_tmpPath).isFile())) {
+            return resolve('missing index.html file');
+          }
 
-        // <---------------- END logic for deleting hidden files in application folder ------------------>
+          _tmpPath = path.join(dAppDir, 'metadata.json');
+          if (!(contents.indexOf('metadata.json') > -1 && fs.statSync(_tmpPath).isFile())) {
+            return reject('missing metadata.json file');
+          }
 
-        // check folder structure
-        // -> contracts -> .sol file(s)
-        // -> index.html
-        // -> metadata.json
-        if (!items.includes("metadata.json")) {
-          console.error("Error: missing metadata.json file");
-        } else if (!items.includes("index.html")) {
-          console.error("Error: missing index.html file");
-        } else if (items.includes("contracts")) {
-          // check for the content of contracts folder if exists
-          fs.readdir(
-            path.join(path.resolve(dirValue), "contracts"),
-            (err, list) => {
-              if (err) {
-                console.error(err);
+          _tmpPath = path.join(dAppDir, 'contracts');
+          if (contents.indexOf('contracts') > -1 && fs.statSync(_tmpPath).isDirectory()) {
+
+            _tmpPath = path.join(dAppDir, 'contracts');
+            contents = fs.readdirSync(_tmpPath);
+
+            contents.forEach((file) => {
+              _tmpPath = path.join(dAppDir, 'contracts', file);
+              if (!(path.extname(file) === '.sol' && fs.statSync(_tmpPath).isFile())) {
+                return reject('contracts folder should only include .sol file(s)');
               }
-              let nonSolFileExists = false;
-              list.forEach(file => {
-                // test cases to delete hidden files and check only for .sol extension files
-                // extension checking can be improved in future
-                if (/^\..*/.test(file)) {
-                  console.error(
-                    "Error: here are some hidden files in the contracts folder"
-                  );
-                  nonSolFileExists = true;
-
-                  // <---------------- START logic for deleting hidden files in contracts folder ---------------->
-
-                  // delete hidden file(s)
-                  // fs.unlinkSync(
-                  //   path.join(APPLICATION.HOME_PATH, dirValue, file)
-                  // );
-
-                  // <---------------- END logic for deleting hidden files in contracts folder ------------------>
-                }
-                if (path.extname(file) !== ".sol") {
-                  nonSolFileExists = true;
-                }
-              });
-
-              // throw error if there are some other files in contracts folder including hidden files
-              if (!nonSolFileExists) {
-                const target = path.join(APPLICATION.HOME_PATH,
-                                         APPLICATION.CONFIG_FOLDER,
-                                         APPLICATION.ZIP_FILE);
-                zip.zipFolder(dirValue, target)
-                  .then(() => {
-                    uploadZip();
-                  })
-                  .catch(err => {
-                    if (
-                      fs.existsSync(
-                        path.join(
-                          APPLICATION.HOME_PATH,
-                          APPLICATION.CONFIG_FOLDER,
-                          APPLICATION.ZIP_FILE
-                        )
-                      )
-                    ) {
-                      fs.unlinkSync(
-                        path.join(
-                          APPLICATION.HOME_PATH,
-                          APPLICATION.CONFIG_FOLDER,
-                          APPLICATION.ZIP_FILE
-                        )
-                      );
-                    }
-                    console.error(err);
-                  });
-              } else {
-                console.error(
-                  "Error: contracts folder should only contain .sol file(s)"
-                );
+              if (/^\..*/.test(file)) {
+                return reject('contracts folder contains hidden file(s)');
               }
-            }
-          );
+            });
+
+            resolve();
+
+          } else {
+            return reject('missing contracts folder');
+          }
+
         } else {
-          console.error("Error: missing contracts folder");
+          return reject('cannot find dApp at ' + dirValue + '\nNote: path must be with respects to User\'s home directory');
         }
+
+      })
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
       });
-    } else {
-      console.error(
-        "Error: no dApp found with name " +
-          dirValue +
-          "with respect to home folder"
-      );
+  });
+}
+
+/**
+ * Read config.yaml file
+ * @returns {Promise}
+ */
+function readYAML() {
+  return new Promise((resolve, reject) => {
+    const YAMLFile = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.CONFIG_FILE);
+    try {
+      const config = yaml.safeLoad(fs.readFileSync(YAMLFile, 'utf8'));
+      data.username = config.username;
+      data.hostname = config.hostname;
+      resolve();
+    } catch (err) {
+      reject(err);
     }
   });
 }
 
-var data = {
-  username: null,
-  address: null,
-  password: null,
-  hostAddr: null
-};
-
 /**
- * Upload zip to apex server
+ * Fetch user address 
+ * @returns {Promise}
  */
-function uploadZip() {
-  try {
-    // read config.yaml file
-    const config = yaml.safeLoad(
-      fs.readFileSync(
-        path.join(
-          APPLICATION.HOME_PATH,
-          APPLICATION.CONFIG_FOLDER,
-          APPLICATION.CONFIG_FILE
-        ),
-        "utf8"
-      )
-    );
+function getUserAddress() {
+  return new Promise((resolve, reject) => {
 
-    // set username from config.yaml file
-    let intendedJSON = JSON.stringify(config, null, 4);
-    data.username = JSON.parse(intendedJSON).username;
-    data.hostAddr = JSON.parse(intendedJSON).hostAddr;
+    // TODO: construct url using URL module
+    const url = data.hostname + API_ENDPOINTS.BLOC_GET_USER_ADDRESS + data.username
 
-    // call bloc api get user address from username
-    rp(data.hostAddr + API_ENDPOINTS.BLOC_GET_USER_ADDRESS + data.username)
-      .then(response => {
-        // check if user exists
-        if (JSON.parse(response).length > 0) {
-          data.address = JSON.parse(response)[0];
+    let options = {
+      method: 'GET',
+      url: url,
+      followRedirect: false
+    }
 
-          // get password for the user
-          getPassword().then(answer => {
-            data.password = answer.password;
-
-            let options = {
-              method: "POST",
-              uri: data.hostAddr + API_ENDPOINTS.APEX_UPLOAD_ZIP,
-              formData: {
-                username: data.username,
-                password: data.password,
-                address: data.address,
-                file: {
-                  value: fs.createReadStream(
-                    path.join(
-                      APPLICATION.HOME_PATH,
-                      APPLICATION.CONFIG_FOLDER,
-                      APPLICATION.ZIP_FILE
-                    )
-                  ),
-                  options: {
-                    filename: APPLICATION.ZIP_FILE,
-                    contentType: "application/zip"
-                  }
-                }
-              }
-            };
-
-            console.log("uploading...");
-            // call apex api to upload zip file and delete file after that
-            rp(options)
-              .then(body => {
-                fs.unlinkSync(
-                  path.join(
-                    APPLICATION.HOME_PATH,
-                    APPLICATION.CONFIG_FOLDER,
-                    APPLICATION.ZIP_FILE
-                  )
-                );
-                console.log(
-                  "application successfully deployed with url %s",
-                  JSON.parse(body).url
-                );
-              })
-              .catch(err => {
-                fs.unlinkSync(
-                  path.join(
-                    APPLICATION.HOME_PATH,
-                    APPLICATION.CONFIG_FOLDER,
-                    APPLICATION.ZIP_FILE
-                  )
-                );
-                console.log(JSON.parse(err.error).error.message);
-              });
-          });
-        } else {
-          console.log(
-            "username not found. try running strato config to modify username"
-          );
+    rp(options)
+      .then((address) => {
+        let _address;
+        try {
+          _address = JSON.parse(address);
+          if (_address.length > 0) {
+            data.address = _address[0];
+            resolve();
+          } else {
+            reject('username not found. try running strato config to modify username');
+          }
+        } catch (err) {
+          console.error('Error :' + err);
+          process.exit();
         }
       })
-      .catch(err => {
-        if (err.error.code === "ECONNREFUSED") {
-          console.error(
-            "Error: could not connect to the host. try running strato config to modify host address"
-          );
-        } else if (err.error.code === "ENOTFOUND") {
-          console.error(
-            "Error: could not connect to STRATO. try running strato config to modify host address"
-          );
+      .catch((err) => {
+        if (err.error.code === 'ECONNREFUSED') {
+          reject('could not connect to the host. try running strato config to modify host address');
+        } else if (err.error.code === 'ENOTFOUND') {
+          reject('could not connect to the host');
         } else {
-          console.error("Error: code " + err.error.code);
+          if (err.error.code) {
+            reject('status code: ' + err.error.code);
+          } else {
+            reject('status code: ' + err.statusCode);
+          }
         }
       });
-  } catch (err) {
-    console.error(err);
-  }
+  });
+}
+
+/**
+ * Upload zip on host
+ * @returns {Promise}
+ */
+function uploadZip() {
+  return new Promise((resolve, reject) => {
+
+    const uri = data.hostname + API_ENDPOINTS.APEX_UPLOAD_ZIP
+    const zipFile = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
+
+    let options = {
+      method: 'POST',
+      uri: uri,
+      formData: {
+        username: data.username,
+        password: data.password,
+        address: data.address,
+        file: {
+          value: fs.createReadStream(zipFile),
+          options: {
+            filename: APPLICATION.ZIP_FILE,
+            contentType: 'application/zip'
+          }
+        }
+      }
+    }
+
+    console.log('uploading...');
+
+    rp(options)
+      .then((response) => {
+        try {
+          let url = JSON.parse(response).url;
+          resolve('application successfully deployed at ' + url);
+        } catch (err) {
+          reject(err);
+        }
+      })
+      .catch((err) => {
+        if (err.error.code === 'ECONNREFUSED') {
+          reject('could not connect to the host. try running strato config to modify host address');
+        } else if (err.error.code === 'ENOTFOUND') {
+          reject('could not connect to the host');
+        } else {
+          if (err.error.code) {
+            reject('status code: ' + err.error.code);
+          } else {
+            try {
+              let text = JSON.parse(err.error).error.message;
+              reject(text);
+            } catch (error) {
+              reject('status code: ' + err.statusCode);
+            }
+          }
+        }
+      })
+      .finally(() => {
+        const target = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
+        if (fs.existsSync(target)) {
+          fs.unlinkSync(target);
+        }
+      });
+  });
+}
+
+/**
+ * Detele zip file created in User's home directory /strato
+ */
+function deleteZip() {
+  return new Promise((resolve, reject) => {
+    const target = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
+    if (fs.existsSync(target)) {
+      fs.unlink(target, (err) => {
+        if (err) {
+          return reject('Error: unable to delete temporary zip folder');
+        }
+        resolve();
+      });
+    }
+  });
 }
 
 /**
@@ -289,18 +302,18 @@ function uploadZip() {
 function getPassword() {
   return new Promise((resolve, reject) => {
     prompt({
-      type: "password",
-      name: "password",
-      message: "password: ",
-      validate: value => {
-        if (!value) return "password required";
-        return true;
-      }
-    })
-      .then(answer => {
-        resolve(answer);
+        type: 'password',
+        name: 'password',
+        message: 'password: ',
+        validate: value => {
+          if (!value) return 'password required';
+          return true;
+        }
       })
-      .catch(err => {
+      .then((password) => {
+        resolve(password);
+      })
+      .catch((err) => {
         reject(err);
       });
   });

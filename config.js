@@ -1,119 +1,88 @@
-const { prompt } = require("inquirer");
-const yaml = require("write-yaml");
-const path = require("path");
-const { APPLICATION } = require("./properties");
+const path = require('path');
+const yaml = require('write-yaml');
+const co = require('co');
+const { prompt } = require('inquirer');
+const { APPLICATION } = require('./properties');
 
-// prompt questions for strato config command
-var username = [
-  {
-    type: "input",
-    name: "username",
-    message: "username: ",
-    validate: value => {
-      // validation for username. can't contain only numbers, special characters and length should be between 6 to 20.
-      let reg = /^(\d*[a-zA-Z]\d*)+$/;
-      if (!value) return "username required";
-      // if (!value.match(reg) || value.length < 6 || value.length > 20)
-      if (!value.match(reg))
-        return "username cannot contain only numbers, special characters and should be between 6 and 20";
-      return true;
+let username = [{
+  type: 'input',
+  name: 'username',
+  message: 'username: ',
+  validate: value => {
+    if (!value) {
+      return 'username required';
     }
+    return true;
   }
-];
+}];
 
-var hostname = [
-  {
-    type: "input",
-    name: "hostAddr",
-    message: "host IP address (with http:// || https://): ",
-    validate: value => {
-      // validation for IP address.
-      let reg = /^(http|https):\/\/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-      if (!value) return "host IP address required";
-      if (!value.match(reg)) return "please enter a valid IP address";
-      return true;
+let hostname = [{
+  type: 'input',
+  name: 'hostname',
+  message: 'hostname: ',
+  validate: value => {
+    if (!value) {
+      return 'hostname required';
     }
+    return true;
   }
-];
+}];
 
-// config.yaml skeleton
-var config = {
+let configStruct = {
   username: null,
-  hostAddr: null
+  hostname: APPLICATION.TESTNET
 };
 
 /**
  * Entry point for the strato config command
  * @returns {Promise}
  */
-function main() {
+function saveConfig() {
   return new Promise((resolve, reject) => {
-    console.log("Please enter the configuration information:");
-    getUsername()
-      .then(() => {
-        resolve();
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
-}
 
-/**
- * Call prompt to get username
- * @returns {Promise}
- */
-function getUsername() {
-  return new Promise((resolve, reject) => {
-    prompt(username).then(data => {
-      // set username
-      config.username = data.username;
+    co(function* () {
 
-      console.log("Press [ ENTER ] for Default Host");
-      console.log("Press [ SPACE ] for Custom Host");
+      console.log('Please enter the configuration information:');
 
-      // program halts to capture ENTER || SPACE || CTRL + C keys from Keyboard input
-      captureKeys().then(key => {
-        if (key === "ENTER") {
-          // set host address to default value
-          config.hostAddr = APPLICATION.TESTNET;
-          generateFile()
-            .then(() => {
-              resolve();
-            })
-            .catch(err => {
-              reject(err);
-            });
-        } else if (key === "SPACE") {
-          getHostAddress()
-            .then(() => {
-              resolve();
-            })
-            .catch(err => {
-              reject(err);
-            });
-        }
-      });
+      yield prompt(username)
+        .then((data) => {
+          configStruct.username = data.username;
+          console.log('Press [ ENTER ] for Default Host');
+          console.log('Press [ SPACE ] for Custom Host');
+        })
+        .catch((err) => {
+          return reject(err);
+        });
+
+      let _key;
+
+      yield captureKeys()
+        .then((key) => {
+          _key = key;
+        });
+
+      if (_key === 'SPACE') {
+        yield prompt(hostname)
+          .then(data => {
+            configStruct.hostname = data.hostname;
+          })
+          .catch((err) => {
+            return reject(err);
+          });
+      }
+
+      yield generateYAML()
+        .then(() => {
+          return resolve();
+        })
+        .catch((err) => {
+          return reject(err);
+        });
+
     });
   });
 }
 
-/**
- * Get Host Address
- * @returns {Promise}
- */
-function getHostAddress() {
-  return new Promise((resolve, reject) => {
-    prompt(hostname)
-      .then(data => {
-        config.hostAddr = data.hostAddr;
-        resolve(generateFile());
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
-}
 
 /**
  * Capture Keys
@@ -124,17 +93,17 @@ function captureKeys() {
     let stdin = process.stdin;
     stdin.setRawMode(true);
     stdin.resume();
-    stdin.setEncoding("utf8");
-    stdin.addListener("data", key => {
-      if (key === "\u000D") {
+    stdin.setEncoding('utf8');
+    stdin.addListener('data', (key) => {
+      if (key === '\u000D') {
         stdin.pause();
-        stdin.removeAllListeners("data");
-        resolve("ENTER");
-      } else if (key === "\u0020") {
+        stdin.removeAllListeners('data');
+        resolve('ENTER');
+      } else if (key === '\u0020') {
         stdin.pause();
-        stdin.removeAllListeners("data");
-        resolve("SPACE");
-      } else if (key === "\u0003") {
+        stdin.removeAllListeners('data');
+        resolve('SPACE');
+      } else if (key === '\u0003') {
         process.exit();
       }
     });
@@ -142,25 +111,20 @@ function captureKeys() {
 }
 
 /**
- * Generate 'strato' folder in User's home directory and generate config.yaml file
+ * Generate config.yaml inside User's home directory /strato
  * @returns {Promise}
  */
-function generateFile() {
+function generateYAML() {
   return new Promise((resolve, reject) => {
-    yaml(
-      path.join(
-        APPLICATION.HOME_PATH,
-        APPLICATION.CONFIG_FOLDER,
-        APPLICATION.CONFIG_FILE
-      ),
-      config,
-      err => {
-        if (err) return reject(err);
-        console.log("Configuration file has been saved");
-        resolve();
+    const target = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.CONFIG_FILE);
+    yaml(target, configStruct, err => {
+      if (err) {
+        return reject(err);
       }
-    );
+      console.log('Configuration file has been saved');
+      resolve();
+    });
   });
 }
 
-module.exports.main = main;
+module.exports.saveConfig = saveConfig;

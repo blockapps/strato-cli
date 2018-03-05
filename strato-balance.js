@@ -1,117 +1,167 @@
-const path = require("path");
-const fs = require("fs");
-const rp = require("request-promise");
-const yaml = require("js-yaml");
-const utils = require("./utils");
-const config_command = require("./config");
-const { APPLICATION, API_ENDPOINTS } = require("./properties");
+const path = require('path');
+const fs = require('fs');
+const rp = require('request-promise');
+const yaml = require('js-yaml');
+const co = require('co');
+const { validateConfig } = require('./utils');
+const { APPLICATION, API_ENDPOINTS } = require('./properties');
 
-function main() {
-  // check if config.yaml exists
-  utils
-    .fsFileExistsSync(
-      path.join(
-        APPLICATION.HOME_PATH,
-        APPLICATION.CONFIG_FOLDER,
-        APPLICATION.CONFIG_FILE
-      )
-    )
-    .then(result => {
-      if (!result) {
-        console.log(
-          "In order to configure your strato environment, you must enter your information below."
-        );
-        console.log(
-          "Note: if you have already completed this step, make sure that your ./strato directory contains a config.yaml file."
-        );
-        config_command
-          .main()
-          .then(() => {
-            getBalance();
-          })
-          .catch(err => {
-            console.error(err);
-          });
-      } else {
-        getBalance();
-      }
-    });
+let data = {
+  username: null,
+  hostname: null,
+  address: null
 }
 
 /**
- * Entry point for the strato balance command
- */
+ * Entry point for strato balance command
+*/
 function getBalance() {
-  try {
-    // load config.yaml file
-    const config = yaml.safeLoad(
-      fs.readFileSync(
-        path.join(
-          APPLICATION.HOME_PATH,
-          APPLICATION.CONFIG_FOLDER,
-          APPLICATION.CONFIG_FILE
-        ),
-        "utf8"
-      )
-    );
 
-    let indentedJson = JSON.stringify(config, null, 4);
-    let host = JSON.parse(indentedJson).hostAddr;
+  co(function* () {
 
-    rp(
-      host +
-        API_ENDPOINTS.BLOC_GET_USER_ADDRESS +
-        JSON.parse(indentedJson).username
-    )
-      .then(response => {
-        // if balance exists (account facuet completed)
-        if (JSON.parse(response).length > 0) {
-          let options = {
-            uri: host + API_ENDPOINTS.STRATO_GET_BALANCE,
-            qs: {
-              address: JSON.parse(response)[0]
-            }
-          };
-
-          rp(options).then(balance => {
-            if (JSON.parse(balance).length > 0) {
-              console.log(
-                "Balance for %s (%s): %s",
-                JSON.parse(indentedJson).username,
-                JSON.parse(response)[0],
-                JSON.parse(balance)[0].balance
-              );
-            } else {
-              console.log(
-                "Balance for %s (%s): NIL",
-                JSON.parse(indentedJson).username,
-                JSON.parse(response)[0]
-              );
-              console.log("try account faucet");
-            }
-          });
-        } else {
-          console.log(
-            "username not found. try running strato config to modify username"
-          );
-        }
-      })
-      .catch(err => {
-        if (err.error.code === "ECONNREFUSED") {
-          console.error(
-            "Error: could not connect to the host. try running strato config to modify host address"
-          );
-        } else if (err.error.code === "ENOTFOUND") {
-          console.error(
-            "Error: could not connect to STRATO. try running strato config to modify host address"
-          );
-        } else {
-          console.error("Error: code " + err.error.code);
-        }
+    yield validateConfig()
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
       });
-  } catch (err) {
-    console.error(err);
-  }
+
+    yield readYAML()
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
+      });
+
+    yield getUserAddress()
+      .catch((err) => {
+        console.error('Error: ', err);
+        process.exit();
+      });
+
+    yield fetchBalance()
+      .then((text) => {
+        console.log(text);
+      })
+      .catch((err) => {
+        console.error('Error: ', err);
+        process.exit();
+      });
+
+  });
 }
 
-main();
+/**
+ * Read config.yaml file
+ * @returns {Promise}
+ */
+function readYAML() {
+  return new Promise((resolve, reject) => {
+    const YAMLFile = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.CONFIG_FILE);
+    try {
+      const config = yaml.safeLoad(fs.readFileSync(YAMLFile, 'utf8'));
+      data.username = config.username;
+      data.hostname = config.hostname;
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Fetch user address 
+ * @returns {Promise}
+ */
+function getUserAddress() {
+  return new Promise((resolve, reject) => {
+
+    // TODO: construct url using URL module
+    const url = data.hostname + API_ENDPOINTS.BLOC_GET_USER_ADDRESS + data.username
+
+    let options = {
+      method: 'GET',
+      url: url,
+      followRedirect: false
+    }
+
+    rp(options)
+      .then((address) => {
+        let _address;
+        try {
+          _address = JSON.parse(address);
+          if (_address.length > 0) {
+            data.address = _address[0];
+            resolve();
+          } else {
+            reject('username not found. try running strato config to modify username');
+          }
+        } catch (err) {
+          console.error('Error :' + err);
+          process.exit();
+        }
+      })
+      .catch((err) => {
+        if (err.error.code === 'ECONNREFUSED') {
+          reject('could not connect to the host. try running strato config to modify host address');
+        } else if (err.error.code === 'ENOTFOUND') {
+          reject('could not connect to the host');
+        } else {
+          if (err.error.code) {
+            reject('status code: ' + err.error.code);
+          } else {
+            reject('status code: ' + err.statusCode);
+          }
+        }
+      });
+  });
+}
+
+/**
+ * Fetch user balance 
+ * @returns {Promise}
+ */
+function fetchBalance() {
+  return new Promise((resolve, reject) => {
+
+    let uri = data.hostname + API_ENDPOINTS.STRATO_GET_BALANCE;
+
+    let options = {
+      method: 'GET',
+      uri: uri,
+      qs: {
+        address: data.address
+      }
+    }
+
+    rp(options)
+      .then((response) => {
+        try {
+          let balance = JSON.parse(response);
+          if (balance.length > 0) {
+            resolve('Balance for ' + data.username + ' (' + data.address + ') : ' + balance[0].balance);
+          } else {
+            resolve('Balance for ' + data.username + ' (' + data.address + ') : NIL');
+          }
+
+        } catch (err) {
+          console.error('Error :' + err);
+          process.exit();
+        }
+      })
+      .catch((err) => {
+        if (err.error.code === 'ECONNREFUSED') {
+          reject('could not connect to the host. try running strato config to modify host address');
+        } else if (err.error.code === 'ENOTFOUND') {
+          reject('could not connect to the host');
+        } else {
+          if (err.error.code) {
+            reject('status code: ' + err.error.code);
+          } else {
+            reject('status code: ' + err.statusCode);
+          }
+        }
+      });
+
+  });
+}
+
+getBalance();

@@ -70,7 +70,7 @@ app directory
 Upload the sample app to the STRATO Blockchain by running the following command from your home directory
 
 ```
-strato upload /path/to/<app name>
+strato upload path/to/<app name>
 ```
 
 You will be prompted for a `password` for the STRATO User you created at the start of this guide.
