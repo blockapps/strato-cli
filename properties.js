@@ -6,7 +6,7 @@ const APPLICATION = {
   ZIP_FILE: 'strato.zip',
   REPO_NAME: 'blockapps-sample-game',
   GITHUB_LINK: 'https://github.com/blockapps/blockapps-sample-game/archive/master.zip',
-  TESTNET: 'http://stratodev.blockapps.net/'
+  TESTNET: 'https://stratodev.blockapps.net/'
 }
 
 const API_ENDPOINTS = {
