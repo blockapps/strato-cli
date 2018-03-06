@@ -5,6 +5,7 @@ const co = require('co');
 const unzip = require('unzip');
 const fs = require('fs');
 const path = require('path');
+const urljoin = require('url-join');
 const { validateConfig } = require('./utils');
 const { APPLICATION } = require('./properties');
 

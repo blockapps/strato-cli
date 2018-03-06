@@ -5,7 +5,9 @@ const yaml = require('js-yaml');
 const co = require('co');
 const fs = require('fs');
 const path = require('path');
+const urljoin = require('url-join');
 const { validateConfig, dirExists } = require('./utils');
+const { getBalance } = require('./balance');
 const { APPLICATION, API_ENDPOINTS } = require('./properties');
 const { zipFolder } = require('./strato-ziplib');
 
@@ -18,8 +20,9 @@ let data = {
 
 program.arguments('<dir>').action((dir) => {
 
+  currentDir = process.cwd();
   dirValue = dir;
-  const dAppDir = path.join(APPLICATION.HOME_PATH, dirValue);
+  const dAppDir = path.join(currentDir, dirValue);
   const zipTarget = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
 
   co(function* () {
@@ -41,6 +44,18 @@ program.arguments('<dir>').action((dir) => {
         console.error('Error: ' + err);
         process.exit();
       });
+
+    yield getBalance()
+      .then((result) => {
+        if (result.balance <= 0) {
+          console.error('Sorry! You don\'t have enough tokens. Please send an email with your account address to product@blockapps.net to request funds');
+          process.exit();
+        }
+      })
+      .catch((err) => {
+        console.error('Error: ' + err);
+        process.exit();
+      })
 
     yield zipFolder(dAppDir, zipTarget)
       .catch((err) => {
@@ -105,7 +120,7 @@ function validateDApp(dAppDir) {
 
           let _tmpPath = path.join(dAppDir, 'index.html');
           if (!(contents.indexOf('index.html') > -1 && fs.statSync(_tmpPath).isFile())) {
-            return resolve('missing index.html file');
+            return reject('missing index.html file');
           }
 
           _tmpPath = path.join(dAppDir, 'metadata.json');
@@ -173,33 +188,31 @@ function getUserAddress() {
   return new Promise((resolve, reject) => {
 
     // TODO: construct url using URL module
-    const url = data.hostname + API_ENDPOINTS.BLOC_GET_USER_ADDRESS + data.username
+    const url = urljoin(data.hostname, API_ENDPOINTS.BLOC_GET_USER_ADDRESS, data.username);
 
     let options = {
       method: 'GET',
       url: url,
-      followRedirect: false
+      followRedirect: true
     }
 
     rp(options)
-      .then((address) => {
-        let _address;
+      .then((response) => {
         try {
-          _address = JSON.parse(address);
-          if (_address.length > 0) {
-            data.address = _address[0];
+          let address = JSON.parse(response);
+          if (address.length > 0) {
+            data.address = address[0];
             resolve();
           } else {
             reject('username not found. try running strato config to modify username');
           }
         } catch (err) {
-          console.error('Error :' + err);
-          process.exit();
+          reject('the hostname provided is not the STRATO node');
         }
       })
       .catch((err) => {
         if (err.error.code === 'ECONNREFUSED') {
-          reject('could not connect to the host. try running strato config to modify host address');
+          reject('could not connect to the host. try running strato config to modify the hostname');
         } else if (err.error.code === 'ENOTFOUND') {
           reject('could not connect to the host');
         } else {
@@ -220,7 +233,7 @@ function getUserAddress() {
 function uploadZip() {
   return new Promise((resolve, reject) => {
 
-    const uri = data.hostname + API_ENDPOINTS.APEX_UPLOAD_ZIP
+    const uri = urljoin(data.hostname, API_ENDPOINTS.APEX_UPLOAD_ZIP);
     const zipFile = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
 
     let options = {
@@ -237,7 +250,8 @@ function uploadZip() {
             contentType: 'application/zip'
           }
         }
-      }
+      },
+      followRedirect: true
     }
 
     console.log('uploading...');
@@ -248,12 +262,13 @@ function uploadZip() {
           let url = JSON.parse(response).url;
           resolve('application successfully deployed at ' + url);
         } catch (err) {
-          reject(err);
+          reject('the hostname provided is not the STRATO node');
         }
       })
       .catch((err) => {
+        console.log(err);
         if (err.error.code === 'ECONNREFUSED') {
-          reject('could not connect to the host. try running strato config to modify host address');
+          reject('could not connect to the host. try running strato config to modify the hostname');
         } else if (err.error.code === 'ENOTFOUND') {
           reject('could not connect to the host');
         } else {

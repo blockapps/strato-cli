@@ -64,7 +64,12 @@ function saveConfig() {
       if (_key === 'SPACE') {
         yield prompt(hostname)
           .then(data => {
-            configStruct.hostname = data.hostname;
+            let hostname = data.hostname;
+            if(!hostname.startsWith('http://') && !hostname.startsWith('https://')) {
+              configStruct.hostname = 'http://' + hostname;
+            } else {
+              configStruct.hostname = hostname;
+            }
           })
           .catch((err) => {
             return reject(err);
