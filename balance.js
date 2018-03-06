@@ -117,11 +117,11 @@ function getUserAddress() {
 function fetchBalance() {
     return new Promise((resolve, reject) => {
 
-        let uri = urljoin(data.hostname, API_ENDPOINTS.STRATO_GET_BALANCE);
+        let url = urljoin(data.hostname, API_ENDPOINTS.STRATO_GET_BALANCE);
 
         let options = {
             method: 'GET',
-            uri: uri,
+            url: url,
             qs: {
                 address: data.address
             },

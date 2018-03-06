@@ -233,12 +233,12 @@ function getUserAddress() {
 function uploadZip() {
   return new Promise((resolve, reject) => {
 
-    const uri = urljoin(data.hostname, API_ENDPOINTS.APEX_UPLOAD_ZIP);
+    const url = urljoin(data.hostname, API_ENDPOINTS.APEX_UPLOAD_ZIP);
     const zipFile = path.join(APPLICATION.HOME_PATH, APPLICATION.CONFIG_FOLDER, APPLICATION.ZIP_FILE);
 
     let options = {
       method: 'POST',
-      uri: uri,
+      url: url,
       formData: {
         username: data.username,
         password: data.password,
@@ -266,7 +266,6 @@ function uploadZip() {
         }
       })
       .catch((err) => {
-        console.log(err);
         if (err.error.code === 'ECONNREFUSED') {
           reject('could not connect to the host. try running strato config to modify the hostname');
         } else if (err.error.code === 'ENOTFOUND') {

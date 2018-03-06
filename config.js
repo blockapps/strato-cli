@@ -19,10 +19,15 @@ let username = [{
 let hostname = [{
   type: 'input',
   name: 'hostname',
-  message: 'hostname: ',
+  message: 'hostname (with http:// || https://): ',
   validate: value => {
+    let reg = /^(http|https):\/\/.*$/;
     if (!value) {
       return 'hostname required';
+    } else {
+      if(!reg.test(value)) {
+        return 'protocol required';
+      }
     }
     return true;
   }
