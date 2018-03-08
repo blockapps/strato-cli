@@ -1,5 +1,5 @@
-## strato-cli
-CLI tool for easily deploying app bundles to the STRATO blockchain
+## STRATO CLI Tool
+Used to easily deploy app bundles to the STRATO blockchain
 
 #### Follow these instructions to setup and begin developing applications on the STRATO Blockchain
 
