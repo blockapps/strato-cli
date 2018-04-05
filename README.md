@@ -25,7 +25,7 @@ strato --version
 
 ### 2. Configure CLI Tool:
 
-In order to configure the CLI Tool we need to provide the STRATO Blockchain host where the app bundle will be deployed.
+In order to configure the CLI Tool, we need to provide the STRATO Blockchain host where the app bundle will be deployed.
 
 You can use STRATO Public Network running at https://stratodev.blockapps.net or you can run own local instance of STRATO using https://github.com/blockapps/strato-getting-started
 
@@ -55,7 +55,7 @@ strato config
 
 You will be prompted for a `<username>`, type in your username of the account created above
 
-For `<hostname>` you will be prompted to press [Enter] or [Tab] as below
+For `<hostname>` you will be prompted to press [Enter] or [Space] as below
 
 ##### For Strato Public Network:
 
@@ -66,7 +66,7 @@ Press [Enter] to configure the CLI Tool to use the STRATO Public Network as Defa
 ##### For Strato Local/Custom Network:
 
 ```
-Press [Tab] to configure the CLI Tool to use the your http://Localhost or Custom hostname
+Press [Space] to configure the CLI Tool to use the your http://Localhost or Custom hostname
 ```
 
 ### 3. Create Sample dApp using CLI Tool:
