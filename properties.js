@@ -5,7 +5,7 @@ const APPLICATION = {
   METADATA_FILE: 'metadata.json',
   ZIP_FILE: 'strato.zip',
   REPO_NAME: 'sample-zip',
-  GITHUB_LINK: 'https://github.com/blockapps/'+REPO_NAME+'/archive/master.zip',
+  GITHUB_LINK: 'https://github.com/blockapps/sample-zip/archive/master.zip',
   TESTNET: 'https://stratodev.blockapps.net/'
 }
 
