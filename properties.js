@@ -4,8 +4,8 @@ const APPLICATION = {
   CONFIG_FILE: 'config.yaml',
   METADATA_FILE: 'metadata.json',
   ZIP_FILE: 'strato.zip',
-  REPO_NAME: 'blockapps-sample-game',
-  GITHUB_LINK: 'https://github.com/blockapps/blockapps-sample-game/archive/master.zip',
+  REPO_NAME: 'sample-zip',
+  GITHUB_LINK: 'https://github.com/blockapps/'+REPO_NAME+'/archive/master.zip',
   TESTNET: 'https://stratodev.blockapps.net/'
 }
 
