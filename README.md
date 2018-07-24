@@ -27,12 +27,12 @@ strato --version
 
 In order to configure the CLI Tool, we need to provide the STRATO Blockchain host where the app bundle will be deployed.
 
-You can use STRATO Public Network running at https://stratodev.blockapps.net or you can run own local instance of STRATO using https://github.com/blockapps/strato-getting-started
+You can use STRATO Public Network running at https://stratodemo.blockapps.net or you can run own local instance of STRATO using https://github.com/blockapps/strato-getting-started
 
 ##### For Strato Public Network:
 
 ```
-Create a Developer account on STRATO Public Network https://stratodev.blockapps.net
+Create a Developer account on STRATO Public Network https://stratodemo.blockapps.net
 
 Faucet your account after login to your account from `Account` Tab
 ```
@@ -60,7 +60,7 @@ For `<hostname>` you will be prompted to press [Enter] or [Space] as below
 ##### For Strato Public Network:
 
 ```
-Press [Enter] to configure the CLI Tool to use the STRATO Public Network as Default Host (stratodev.blockapps.net)
+Press [Enter] to configure the CLI Tool to use the STRATO Public Network as Default Host (stratodemo.blockapps.net)
 ```
 
 ##### For Strato Local/Custom Network:
@@ -123,7 +123,7 @@ Upon successful upload of the application, you will receive the following respon
 application successfully deployed with url http://<hostname>/apps/<unique url>
 `
 
-If using `Strato Public Network` the app will be visible in the App Launchpad, you can view it and use it by navigating to: http://stratodev.blockapps.net/dashboard/#/apps
+If using `Strato Public Network` the app will be visible in the App Launchpad, you can view it and use it by navigating to: http://stratodemo.blockapps.net/dashboard/#/apps
 
 ### 5. Check User Balance using CLI Tool:
 
