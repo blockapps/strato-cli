@@ -1,4 +1,6 @@
-# STRATO CLI Tool
+# THE TOOL IS NOW OBSOLETE. Please refer to developers.blockapps.net for STRATO tools.
+
+## STRATO CLI Tool
 
 Used to easily deploy app bundles to the STRATO Blockchain
 
